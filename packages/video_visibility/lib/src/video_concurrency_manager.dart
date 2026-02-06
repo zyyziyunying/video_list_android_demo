@@ -5,7 +5,7 @@ import 'package:flutter/scheduler.dart';
 
 class VideoConcurrencyManager extends ChangeNotifier {
   VideoConcurrencyManager({
-    int maxActive = 2,
+    int maxActive = 3,
     this.visibleStart = 0.6,
     this.visibleStop = 0.2,
     this.recalcThrottle = const Duration(milliseconds: 300),

@@ -1,0 +1,12 @@
+name: video_visibility
+description: A Flutter library for managing video visibility and concurrency.
+version: 0.0.1
+
+environment:
+  sdk: ^3.10.7
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  visibility_detector: ^0.4.0+2

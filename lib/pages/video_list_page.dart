@@ -1,11 +1,10 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../data/sample_videos.dart';
-import '../managers/video_concurrency_manager.dart';
+import 'package:video_visibility/video_visibility.dart';
 import '../models/video_item_data.dart';
 import '../widgets/video_list_item.dart';
 
@@ -17,34 +16,19 @@ class VideoListPage extends StatefulWidget {
 }
 
 class _VideoListPageState extends State<VideoListPage> {
-  late final VideoConcurrencyManager _manager;
+  late final VideoVisibilityManager _manager;
   final List<VideoItemData> _items = buildSampleVideos();
-  Timer? _scrollEndTimer;
 
   @override
   void initState() {
     super.initState();
-    _manager = VideoConcurrencyManager(maxActive: 7);
+    _manager = VideoVisibilityManager(maxActive: 3);
   }
 
   @override
   void dispose() {
-    _scrollEndTimer?.cancel();
     _manager.dispose();
     super.dispose();
-  }
-
-  bool _handleScrollNotification(ScrollNotification notification) {
-    if (notification is ScrollStartNotification) {
-      _scrollEndTimer?.cancel();
-      _manager.setScrolling(true);
-    } else if (notification is ScrollEndNotification) {
-      _scrollEndTimer?.cancel();
-      _scrollEndTimer = Timer(const Duration(milliseconds: 250), () {
-        _manager.setScrolling(false);
-      });
-    }
-    return false;
   }
 
   @override
@@ -65,6 +49,7 @@ class _VideoListPageState extends State<VideoListPage> {
                 DropdownButton<int>(
                   value: _manager.maxActive,
                   items: const [
+                    DropdownMenuItem(value: 3, child: Text('3')),
                     DropdownMenuItem(value: 4, child: Text('4')),
                     DropdownMenuItem(value: 5, child: Text('5')),
                     DropdownMenuItem(value: 6, child: Text('6')),
@@ -104,7 +89,7 @@ class _VideoListPageState extends State<VideoListPage> {
                     crossAxisCount * itemWidth +
                     crossAxisSpacing * (crossAxisCount - 1);
                 return NotificationListener<ScrollNotification>(
-                  onNotification: _handleScrollNotification,
+                  onNotification: _manager.createScrollListener(),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: SizedBox(

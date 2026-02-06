@@ -36,7 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   leak_tracker: any
   video_player: ^2.9.1
-  visibility_detector: ^0.4.0+2
+  video_visibility:
+    path: packages/video_visibility
 
 dev_dependencies:
   flutter_test:

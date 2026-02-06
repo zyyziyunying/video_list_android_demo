@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 
 import '../constants.dart';
-import '../managers/video_concurrency_manager.dart';
+import 'package:video_visibility/video_visibility.dart';
+
 import '../models/video_item_data.dart';
 import 'state_pill.dart';
 
@@ -17,7 +17,7 @@ class VideoListItem extends StatefulWidget {
   });
 
   final VideoItemData data;
-  final VideoConcurrencyManager manager;
+  final VideoVisibilityManager manager;
 
   @override
   State<VideoListItem> createState() => _VideoListItemState();
@@ -31,44 +31,20 @@ class _VideoListItemState extends State<VideoListItem> {
   String? _errorMessage;
 
   @override
-  void initState() {
-    super.initState();
-    widget.manager.register(widget.data.id);
-    widget.manager.addListener(_onManagerChanged);
-  }
-
-  @override
-  void didUpdateWidget(VideoListItem oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.manager != widget.manager) {
-      oldWidget.manager.removeListener(_onManagerChanged);
-      widget.manager.addListener(_onManagerChanged);
-    }
-  }
-
-  @override
   void dispose() {
     _disposeTimer?.cancel();
-    widget.manager.removeListener(_onManagerChanged);
-    widget.manager.unregister(widget.data.id);
     _controller?.dispose();
     super.dispose();
   }
 
-  void _onManagerChanged() {
-    final shouldBeActive = widget.manager.isActive(widget.data.id);
-    if (_isActive == shouldBeActive) {
-      return;
-    }
-    _isActive = shouldBeActive;
+  void _onActiveChanged(bool isActive) {
+    if (_isActive == isActive) return;
+    _isActive = isActive;
     if (_isActive) {
       _disposeTimer?.cancel();
       _ensureController();
     } else {
       _pauseAndScheduleDispose();
-    }
-    if (mounted) {
-      setState(() {});
     }
   }
 
@@ -100,9 +76,7 @@ class _VideoListItemState extends State<VideoListItem> {
       _errorMessage = 'Init failed';
       _isInitializing = false;
       await controller.dispose();
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
       return;
     }
 
@@ -114,18 +88,14 @@ class _VideoListItemState extends State<VideoListItem> {
     if (!_isActive) {
       _isInitializing = false;
       await controller.dispose();
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
       return;
     }
 
     _controller = controller;
     _isInitializing = false;
     await controller.play();
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   void _pauseAndScheduleDispose() {
@@ -137,54 +107,53 @@ class _VideoListItemState extends State<VideoListItem> {
       if (controller != null) {
         await controller.dispose();
       }
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return VisibilityDetector(
-      key: Key('visibility-${widget.data.id}'),
-      onVisibilityChanged: (info) {
-        widget.manager.updateVisibility(widget.data.id, info.visibleFraction);
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          AspectRatio(
-            aspectRatio: kVideoAspectRatio,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: _buildVideoContent(),
+    return ManagedVisibilityItem(
+      id: widget.data.id,
+      manager: widget.manager,
+      onActiveChanged: _onActiveChanged,
+      builder: (context, isActive) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            AspectRatio(
+              aspectRatio: kVideoAspectRatio,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _buildVideoContent(),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              Text(
-                widget.data.title,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-              StatePill(
-                label: _isActive ? 'ACTIVE' : 'IDLE',
-                color: _isActive ? Colors.green : Colors.grey,
-              ),
-              if (_isInitializing) const Text('Loading...'),
-              if (_errorMessage != null)
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 6,
+              runSpacing: 4,
+              children: [
                 Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red),
+                  widget.data.title,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-            ],
-          ),
-        ],
-      ),
+                StatePill(
+                  label: isActive ? 'ACTIVE' : 'IDLE',
+                  color: isActive ? Colors.green : Colors.grey,
+                ),
+                if (_isInitializing) const Text('Loading...'),
+                if (_errorMessage != null)
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
