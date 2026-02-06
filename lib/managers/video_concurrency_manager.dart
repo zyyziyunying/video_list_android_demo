@@ -10,6 +10,8 @@ class VideoConcurrencyManager extends ChangeNotifier {
     this.recalcThrottle = const Duration(milliseconds: 300),
   }) : _maxActive = maxActive;
 
+  static const double _fullVisibilityThreshold = 0.999;
+
   final double visibleStart;
   final double visibleStop;
   final Duration recalcThrottle;
@@ -76,16 +78,13 @@ class VideoConcurrencyManager extends ChangeNotifier {
   }
 
   void _recalculate() {
-    if (_isScrolling) {
-      _setActive(<String>{});
-      return;
-    }
-
     final candidates = <_Candidate>[];
     _entries.forEach((id, entry) {
       final isCurrentlyActive = _active.contains(id);
-      final eligible = entry.visible >= visibleStart ||
-          (isCurrentlyActive && entry.visible >= visibleStop);
+      final eligible = _isScrolling
+          ? entry.visible >= _fullVisibilityThreshold
+          : entry.visible >= visibleStart ||
+              (isCurrentlyActive && entry.visible >= visibleStop);
       if (!eligible) {
         return;
       }
@@ -96,6 +95,11 @@ class VideoConcurrencyManager extends ChangeNotifier {
         lastUpdated: entry.lastUpdated,
       ));
     });
+
+    if (candidates.isEmpty) {
+      _setActive(<String>{});
+      return;
+    }
 
     candidates.sort((a, b) {
       if (a.isActive != b.isActive) {

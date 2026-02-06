@@ -4,8 +4,9 @@
 
 ## 视频资源
 
-- `assets/videos/` 下有 20 个本地 MP4 文件（例如 `assets/videos/video_01.mp4` ... `video_20.mp4`）。
+- `assets/videos/` 下有 40 个本地 MP4 文件（例如 `assets/videos/video_01.mp4` ... `video_40.mp4`）。
 - 使用 ffmpeg 生成的测试图案视频（每个 4 秒），1280x720，24 fps，无音频。
+- 每个视频中间带有编号水印（`Video 01`/`Video 02`/...），便于滚动时识别。
 - 列表数据在 `lib/data/sample_videos.dart` 中生成，并通过 `pubspec.yaml` 作为 assets 加载。
 
 ## 视频格式（ffprobe 检查 `assets/videos/video_01.mp4`）
@@ -19,6 +20,26 @@
 - 码率：约 1.4 Mbps（视频）
 - 音频：无
 
+## 重新生成带编号水印的视频（ffmpeg）
+
+以下命令会从 `video_01.mp4` 复制出 40 个带编号水印的视频，文字居中，白字黑描边：
+
+```powershell
+$base = "D:\dev\flutter_code\video_list_android_demo\assets\videos"
+$input = Join-Path $base "video_01.mp4"
+
+for ($i = 1; $i -le 40; $i++) {
+  $num = $i.ToString("00")
+  $out = Join-Path $base "video_$num.mp4"
+  $filter = "drawtext=fontfile='C\:/Windows/Fonts/arial.ttf':text='Video $num':fontcolor=white:fontsize=64:borderw=3:bordercolor=black:x=(w-text_w)/2:y=(h-text_h)/2"
+  ffmpeg -y -hide_banner -loglevel error -i $input -vf $filter -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 23 -an $out
+}
+```
+
+说明：
+- 修改 `1..40` 的范围即可生成更多/更少视频。
+- 如需更换字体或位置，调整 `fontfile` 或 `x/y` 参数。
+
 ## 布局与滚动/播放逻辑
 
 - 布局为每行 4 个视频（`kVideosPerRow = 4`）。
@@ -29,8 +50,8 @@
   - 最多同时播放 `maxActive` 个视频（默认 7，UI 可选 4-7）。
   - 优先保留已激活的视频，其次按可见度、再按最近更新时间排序。
 - 滚动行为：
-  - `ScrollStart` 时进入滚动模式，清空 active（全部暂停）。
-  - `ScrollEnd` 后等待 250 ms 再重新计算 active。
+  - `ScrollStart` 时进入滚动模式，仅允许可见性为 100%（阈值 0.999）的 item 播放，其余暂停。
+  - `ScrollEnd` 后等待 250 ms 再按常规阈值重新计算 active。
 - Item 生命周期：
   - 变 active 时创建 `VideoPlayerController`，初始化、循环、静音并播放。
   - 变 inactive 时先暂停，800 ms 后释放 controller。
