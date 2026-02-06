@@ -1,0 +1,36 @@
+﻿# video_list_android_demo
+
+用于测试滚动列表中并发播放视频的 Flutter 示例项目。
+
+## 视频资源
+
+- `assets/videos/` 下有 20 个本地 MP4 文件（例如 `assets/videos/video_01.mp4` ... `video_20.mp4`）。
+- 使用 ffmpeg 生成的测试图案视频（每个 4 秒），1280x720，24 fps，无音频。
+- 列表数据在 `lib/data/sample_videos.dart` 中生成，并通过 `pubspec.yaml` 作为 assets 加载。
+
+## 视频格式（ffprobe 检查 `assets/videos/video_01.mp4`）
+
+- 容器：MP4（QuickTime / MOV）
+- 视频编码：H.264（High profile）
+- 分辨率：1280x720
+- 帧率：24/1（24 fps）
+- 像素格式：yuv420p
+- 时长：4.0 s
+- 码率：约 1.4 Mbps（视频）
+- 音频：无
+
+## 布局与滚动/播放逻辑
+
+- 布局为每行 4 个视频（`kVideosPerRow = 4`）。
+- 每个 item 使用 `VisibilityDetector` 上报可见比例（visible fraction）。
+- `VideoConcurrencyManager` 决定哪些视频处于 active：
+  - 当 `visible >= 0.6` 时开始播放。
+  - 当 `visible < 0.2` 时停止播放（滞回）。
+  - 最多同时播放 `maxActive` 个视频（默认 7，UI 可选 4-7）。
+  - 优先保留已激活的视频，其次按可见度、再按最近更新时间排序。
+- 滚动行为：
+  - `ScrollStart` 时进入滚动模式，清空 active（全部暂停）。
+  - `ScrollEnd` 后等待 250 ms 再重新计算 active。
+- Item 生命周期：
+  - 变 active 时创建 `VideoPlayerController`，初始化、循环、静音并播放。
+  - 变 inactive 时先暂停，800 ms 后释放 controller。
