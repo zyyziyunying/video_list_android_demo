@@ -1,10 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:leak_tracker/leak_tracker.dart';
 
 import 'pages/video_list_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  _enableLeakTrackingIfNeeded();
   runApp(const VideoListApp());
+}
+
+void _enableLeakTrackingIfNeeded() {
+  if (kReleaseMode) {
+    return;
+  }
+
+  FlutterMemoryAllocations.instance.addListener(
+    (ObjectEvent event) => LeakTracking.dispatchObjectEvent(event.toMap()),
+  );
+  LeakTracking.start();
 }
 
 class VideoListApp extends StatelessWidget {

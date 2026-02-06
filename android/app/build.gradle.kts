@@ -39,6 +39,10 @@ android {
     }
 }
 
+dependencies {
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
+}
+
 flutter {
     source = "../.."
 }

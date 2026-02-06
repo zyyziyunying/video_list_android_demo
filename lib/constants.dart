@@ -1,2 +1,2 @@
-const int kVideosPerRow = 4;
-const double kVideoAspectRatio = 16 / 9;
+const double kVideoAspectRatio = 3 / 4;
+const double kItemFooterHeight = 200;

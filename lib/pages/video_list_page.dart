@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -89,35 +90,48 @@ class _VideoListPageState extends State<VideoListPage> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _handleScrollNotification,
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                itemCount: (_items.length / kVideosPerRow).ceil(),
-                itemBuilder: (context, rowIndex) {
-                  final startIndex = rowIndex * kVideosPerRow;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Row(
-                      children: List.generate(kVideosPerRow, (columnIndex) {
-                        final itemIndex = startIndex + columnIndex;
-                        if (itemIndex >= _items.length) {
-                          return const Expanded(child: SizedBox.shrink());
-                        }
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: VideoListItem(
-                              data: _items[itemIndex],
-                              manager: _manager,
-                            ),
-                          ),
-                        );
-                      }),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const crossAxisCount = 5;
+                const horizontalPadding = 8.0;
+                const verticalPadding = 12.0;
+                const crossAxisSpacing = 12.0;
+                const mainAxisSpacing = 12.0;
+                final itemWidth = constraints.maxWidth / 3;
+                final itemHeight = itemWidth / kVideoAspectRatio + kItemFooterHeight;
+                final childAspectRatio = itemWidth / itemHeight;
+                final gridWidth = horizontalPadding * 2 +
+                    crossAxisCount * itemWidth +
+                    crossAxisSpacing * (crossAxisCount - 1);
+                return NotificationListener<ScrollNotification>(
+                  onNotification: _handleScrollNotification,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: math.max(gridWidth, constraints.maxWidth),
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: verticalPadding,
+                          horizontal: horizontalPadding,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: crossAxisSpacing,
+                          mainAxisSpacing: mainAxisSpacing,
+                          childAspectRatio: childAspectRatio,
+                        ),
+                        itemCount: _items.length,
+                        itemBuilder: (context, index) {
+                          return VideoListItem(
+                            data: _items[index],
+                            manager: _manager,
+                          );
+                        },
+                      ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ],

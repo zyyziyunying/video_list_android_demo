@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 class VideoConcurrencyManager extends ChangeNotifier {
   VideoConcurrencyManager({
@@ -21,6 +22,8 @@ class VideoConcurrencyManager extends ChangeNotifier {
   Timer? _recalcTimer;
   bool _isScrolling = false;
   int _maxActive;
+  bool _isDisposed = false;
+  bool _notifyScheduled = false;
 
   int get maxActive => _maxActive;
   int get activeCount => _active.length;
@@ -41,7 +44,7 @@ class VideoConcurrencyManager extends ChangeNotifier {
   void unregister(String id) {
     _entries.remove(id);
     if (_active.remove(id)) {
-      notifyListeners();
+      _notifyListenersSafely();
     }
   }
 
@@ -129,7 +132,7 @@ class VideoConcurrencyManager extends ChangeNotifier {
     _active
       ..clear()
       ..addAll(nextActive);
-    notifyListeners();
+    _notifyListenersSafely();
   }
 
   bool _setEquals(Set<String> a, Set<String> b) {
@@ -142,6 +145,37 @@ class VideoConcurrencyManager extends ChangeNotifier {
       }
     }
     return true;
+  }
+
+  void _notifyListenersSafely() {
+    if (_isDisposed) {
+      return;
+    }
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final canNotifyNow =
+        phase == SchedulerPhase.idle || phase == SchedulerPhase.postFrameCallbacks;
+    if (canNotifyNow) {
+      notifyListeners();
+      return;
+    }
+    if (_notifyScheduled) {
+      return;
+    }
+    _notifyScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _notifyScheduled = false;
+      if (_isDisposed) {
+        return;
+      }
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _recalcTimer?.cancel();
+    super.dispose();
   }
 }
 
