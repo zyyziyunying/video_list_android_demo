@@ -18,11 +18,26 @@ class VideoListPage extends StatefulWidget {
 class _VideoListPageState extends State<VideoListPage> {
   late final VideoVisibilityManager _manager;
   final List<VideoItemData> _items = buildSampleVideos();
+  late final List<List<VideoItemData>> _rows;
 
   @override
   void initState() {
     super.initState();
     _manager = VideoVisibilityManager(maxActive: 3);
+    _rows = _buildRows();
+  }
+
+  List<List<VideoItemData>> _buildRows() {
+    final random = math.Random(42);
+    final rows = <List<VideoItemData>>[];
+    int index = 0;
+    while (index < _items.length) {
+      final rowCount = 5 + random.nextInt(6); // 5-10 items per row
+      final end = math.min(index + rowCount, _items.length);
+      rows.add(_items.sublist(index, end));
+      index = end;
+    }
+    return rows;
   }
 
   @override
@@ -77,43 +92,48 @@ class _VideoListPageState extends State<VideoListPage> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                const crossAxisCount = 5;
                 const horizontalPadding = 8.0;
-                const verticalPadding = 12.0;
-                const crossAxisSpacing = 12.0;
-                const mainAxisSpacing = 12.0;
+                const itemSpacing = 12.0;
                 final itemWidth = constraints.maxWidth / 3;
-                final itemHeight = itemWidth / kVideoAspectRatio + kItemFooterHeight;
-                final childAspectRatio = itemWidth / itemHeight;
-                final gridWidth = horizontalPadding * 2 +
-                    crossAxisCount * itemWidth +
-                    crossAxisSpacing * (crossAxisCount - 1);
+                final itemHeight =
+                    itemWidth / kVideoAspectRatio + kItemFooterHeight;
                 return NotificationListener<ScrollNotification>(
                   onNotification: _manager.createScrollListener(),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: math.max(gridWidth, constraints.maxWidth),
-                      child: GridView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: verticalPadding,
-                          horizontal: horizontalPadding,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    itemCount: _rows.length,
+                    itemBuilder: (context, rowIndex) {
+                      final rowItems = _rows[rowIndex];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 2.0),
+                        child: SizedBox(
+                          height: itemHeight,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: horizontalPadding,
+                            ),
+                            itemCount: rowItems.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  right: index < rowItems.length - 1
+                                      ? itemSpacing
+                                      : 0,
+                                ),
+                                child: SizedBox(
+                                  width: itemWidth,
+                                  child: VideoListItem(
+                                    data: rowItems[index],
+                                    manager: _manager,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: crossAxisSpacing,
-                          mainAxisSpacing: mainAxisSpacing,
-                          childAspectRatio: childAspectRatio,
-                        ),
-                        itemCount: _items.length,
-                        itemBuilder: (context, index) {
-                          return VideoListItem(
-                            data: _items[index],
-                            manager: _manager,
-                          );
-                        },
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 );
               },

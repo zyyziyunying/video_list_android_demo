@@ -6,8 +6,8 @@ import 'package:flutter/scheduler.dart';
 class VideoConcurrencyManager extends ChangeNotifier {
   VideoConcurrencyManager({
     int maxActive = 3,
-    this.visibleStart = 0.6,
-    this.visibleStop = 0.2,
+    this.visibleStart = 1.0,
+    this.visibleStop = 0.8,
     this.recalcThrottle = const Duration(milliseconds: 300),
   }) : _maxActive = maxActive;
 
@@ -27,6 +27,7 @@ class VideoConcurrencyManager extends ChangeNotifier {
 
   int get maxActive => _maxActive;
   int get activeCount => _active.length;
+  bool get isScrolling => _isScrolling;
 
   set maxActive(int value) {
     if (_maxActive == value) {
@@ -87,16 +88,18 @@ class VideoConcurrencyManager extends ChangeNotifier {
       final eligible = _isScrolling
           ? entry.visible >= _fullVisibilityThreshold
           : entry.visible >= visibleStart ||
-              (isCurrentlyActive && entry.visible >= visibleStop);
+                (isCurrentlyActive && entry.visible >= visibleStop);
       if (!eligible) {
         return;
       }
-      candidates.add(_Candidate(
-        id: id,
-        visible: entry.visible,
-        isActive: isCurrentlyActive,
-        lastUpdated: entry.lastUpdated,
-      ));
+      candidates.add(
+        _Candidate(
+          id: id,
+          visible: entry.visible,
+          isActive: isCurrentlyActive,
+          lastUpdated: entry.lastUpdated,
+        ),
+      );
     });
 
     if (candidates.isEmpty) {
@@ -153,7 +156,8 @@ class VideoConcurrencyManager extends ChangeNotifier {
     }
     final phase = SchedulerBinding.instance.schedulerPhase;
     final canNotifyNow =
-        phase == SchedulerPhase.idle || phase == SchedulerPhase.postFrameCallbacks;
+        phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks;
     if (canNotifyNow) {
       notifyListeners();
       return;

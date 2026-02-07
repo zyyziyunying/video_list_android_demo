@@ -32,16 +32,16 @@ import 'video_concurrency_manager.dart';
 class VideoVisibilityManager extends ChangeNotifier {
   VideoVisibilityManager({
     int maxActive = 3,
-    double visibleStart = 0.6,
+    double visibleStart = 0.8,
     double visibleStop = 0.2,
     Duration recalcThrottle = const Duration(milliseconds: 300),
     this.scrollEndDelay = const Duration(milliseconds: 250),
   }) : _core = VideoConcurrencyManager(
-          maxActive: maxActive,
-          visibleStart: visibleStart,
-          visibleStop: visibleStop,
-          recalcThrottle: recalcThrottle,
-        ) {
+         maxActive: maxActive,
+         visibleStart: visibleStart,
+         visibleStop: visibleStop,
+         recalcThrottle: recalcThrottle,
+       ) {
     _core.addListener(_onCoreChanged);
   }
 
@@ -54,6 +54,8 @@ class VideoVisibilityManager extends ChangeNotifier {
   set maxActive(int value) => _core.maxActive = value;
 
   int get activeCount => _core.activeCount;
+
+  bool get isScrolling => _core.isScrolling;
 
   /// 注册一个视频 item
   void attach(String id) => _core.register(id);

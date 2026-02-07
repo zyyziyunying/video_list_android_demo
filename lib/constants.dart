@@ -1,2 +1,2 @@
 const double kVideoAspectRatio = 3 / 4;
-const double kItemFooterHeight = 200;
+const double kItemFooterHeight = 100;

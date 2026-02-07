@@ -44,3 +44,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 assets/videos
+
+# FVM Version Cache
+.fvm/
+.fvmrc
+.vscode/
