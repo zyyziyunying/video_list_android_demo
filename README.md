@@ -55,3 +55,14 @@ for ($i = 1; $i -le 40; $i++) {
 - Item 生命周期：
   - 变 active 时创建 `VideoPlayerController`，初始化、循环、静音并播放。
   - 变 inactive 时先暂停，800 ms 后释放 controller。
+
+## Mock 数据
+
+- `lib/data/sb_data.mock.dart` 包含模拟的楼层（floor）数据，每个楼层含多个模板（template），字段包括封面图、标题、描述、权重比例等。
+- 数据结构模拟了真实接口返回的嵌套横向滚动列表所需的数据格式。
+
+## 封面图下载工具
+
+- `download_covers.py` 是一个 Python 脚本，用于从 `sb_data.mock.dart` 中提取所有 `cover_image` URL 并批量下载到 `cover_images/` 目录。
+- 运行方式：`python download_covers.py`
+- 下载的图片目录 `cover_images/` 已加入 `.gitignore`，不会被提交到仓库。
