@@ -24,6 +24,7 @@
   - 现状：滚动中要求 `visible >= 0.999` 才可进入候选。
   - 说明：若目标是“滚动时尽量不播放”，该策略合理；若目标是“滚动中保持少量连续播放”，可适度下调阈值。
 
-- [ ] **低优先级** 补齐包级回归测试（`packages/video_visibility/test`）
-  - 范围：可见阈值滞回、滚动切换、active 名额替换、边界值（0/1/maxActive 变化）。
+- [x] **低优先级** 补齐包级回归测试（`packages/video_visibility/test`）
+  - 已做：新增 `video_concurrency_manager_test.dart` 与 `video_visibility_manager_test.dart`，
+    覆盖可见阈值滞回、滚动切换、active 名额替换、边界值（0/1/maxActive 变化）。
   - 目标：关键调度行为可回归验证，降低后续修改风险。
