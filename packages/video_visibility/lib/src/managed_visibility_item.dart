@@ -48,6 +48,7 @@ class _ManagedVisibilityItemState extends State<ManagedVisibilityItem> {
     super.initState();
     widget.manager.attach(widget.id);
     widget.manager.addListener(_onChanged);
+    _syncActiveFromManager();
   }
 
   @override
@@ -61,6 +62,7 @@ class _ManagedVisibilityItemState extends State<ManagedVisibilityItem> {
     if (idChanged || managerChanged) {
       oldWidget.manager.detach(oldWidget.id);
       widget.manager.attach(widget.id);
+      _syncActiveFromManager();
     }
     if (managerChanged) {
       widget.manager.addListener(_onChanged);
@@ -81,6 +83,15 @@ class _ManagedVisibilityItemState extends State<ManagedVisibilityItem> {
       widget.onActiveChanged?.call(_isActive);
       setState(() {});
     }
+  }
+
+  void _syncActiveFromManager() {
+    final active = widget.manager.isActive(widget.id);
+    if (_isActive == active) {
+      return;
+    }
+    _isActive = active;
+    widget.onActiveChanged?.call(_isActive);
   }
 
   @override

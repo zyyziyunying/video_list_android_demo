@@ -81,6 +81,10 @@ class VideoVisibilityManager extends ChangeNotifier {
   /// ```
   bool Function(ScrollNotification) createScrollListener() {
     return (ScrollNotification notification) {
+      // 仅响应当前滚动容器本身，避免嵌套 ListView 的通知干扰全局状态。
+      if (notification.depth != 0) {
+        return false;
+      }
       if (notification is ScrollStartNotification) {
         _scrollEndTimer?.cancel();
         _core.setScrolling(true);
