@@ -1,12 +1,13 @@
 # video_visibility 审查记录（2026-02-24）
 
 ## 范围
+
 - 包：`packages/video_visibility`
 - 目标：审慎检查列表视频的可见性与并发激活调度逻辑
 
 ## 待办清单（按优先级）
 
-- [ ] **高优先级** 修复“已激活优先”导致的占位问题（`lib/src/video_concurrency_manager.dart`）
+- [ ] **策略项（非缺陷）** 修复“已激活优先”导致的占位问题（`lib/src/video_concurrency_manager.dart`）
   - 现象：旧 active 只要高于 `visibleStop`，可能长期占位。
   - 目标：更高可见度的新候选在合理条件下可以替换旧 active。
   - 验收：新增/更新测试覆盖 `maxActive` 下的替换场景。
