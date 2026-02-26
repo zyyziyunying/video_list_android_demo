@@ -52,7 +52,10 @@ for ($i = 1; $i -le 40; $i++) {
   - 候选优先级：已激活优先，其次按可见度、再按最近更新时间排序。
   - 并发约束始终为 `activeCount <= maxActive`。
 - 滚动行为：
-  - `createScrollListener()` 仅处理 `depth == 0` 的滚动通知。
+  - `VideoVisibilityManager` 支持两种滚动通知策略：
+    - `ScrollNotificationStrategy.primaryOnly`：仅处理 `depth == 0`。
+    - `ScrollNotificationStrategy.all`：处理任意深度（含嵌套横向列表）。
+  - 当前示例页（`VideoListPage`）使用 `ScrollNotificationStrategy.all`。
   - `ScrollStart` 进入滚动态；`ScrollEnd` 后等待 `250 ms` 退出滚动态并重算。
 - Item 生命周期：
   - 变 active 时创建 controller，初始化、循环、静音并播放。

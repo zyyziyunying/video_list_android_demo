@@ -23,7 +23,10 @@ class _VideoListPageState extends State<VideoListPage> {
   @override
   void initState() {
     super.initState();
-    _manager = VideoVisibilityManager(maxActive: 3);
+    _manager = VideoVisibilityManager(
+      maxActive: 3,
+      scrollNotificationStrategy: ScrollNotificationStrategy.all,
+    );
     _rows = _buildRows();
   }
 

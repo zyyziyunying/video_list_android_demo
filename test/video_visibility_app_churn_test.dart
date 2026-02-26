@@ -101,6 +101,7 @@ void main() {
         visibleStop: 0.2,
         recalcThrottle: throttle,
         scrollEndDelay: scrollEndDelay,
+        scrollNotificationStrategy: ScrollNotificationStrategy.all,
       );
       controllerFactory = FakeVideoItemControllerFactory();
       itemKeys = {

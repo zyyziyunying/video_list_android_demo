@@ -4,6 +4,15 @@ import 'package:flutter/material.dart';
 
 import 'video_concurrency_manager.dart';
 
+/// 控制 [createScrollListener] 如何处理嵌套滚动通知。
+enum ScrollNotificationStrategy {
+  /// 仅处理当前滚动容器（`depth == 0`）的通知。
+  primaryOnly,
+
+  /// 处理任意深度的滚动通知，包含嵌套滚动容器。
+  all,
+}
+
 /// 视频可见性管理门面类
 ///
 /// 在 [VideoConcurrencyManager] 之上封装更易用的 API，
@@ -36,6 +45,7 @@ class VideoVisibilityManager extends ChangeNotifier {
     double visibleStop = 0.2,
     Duration recalcThrottle = const Duration(milliseconds: 300),
     this.scrollEndDelay = const Duration(milliseconds: 250),
+    this.scrollNotificationStrategy = ScrollNotificationStrategy.primaryOnly,
   }) : _core = VideoConcurrencyManager(
          maxActive: maxActive,
          visibleStart: visibleStart,
@@ -47,6 +57,7 @@ class VideoVisibilityManager extends ChangeNotifier {
 
   final VideoConcurrencyManager _core;
   final Duration scrollEndDelay;
+  final ScrollNotificationStrategy scrollNotificationStrategy;
   Timer? _scrollEndTimer;
 
   int get maxActive => _core.maxActive;
@@ -79,10 +90,17 @@ class VideoVisibilityManager extends ChangeNotifier {
   ///   child: ...,
   /// )
   /// ```
-  bool Function(ScrollNotification) createScrollListener() {
+  ///
+  /// [strategy] 为空时使用构造函数中的 [scrollNotificationStrategy]。
+  bool Function(ScrollNotification) createScrollListener({
+    ScrollNotificationStrategy? strategy,
+  }) {
+    final effectiveStrategy = strategy ?? scrollNotificationStrategy;
     return (ScrollNotification notification) {
-      // 仅响应当前滚动容器本身，避免嵌套 ListView 的通知干扰全局状态。
-      if (notification.depth != 0) {
+      final shouldHandle =
+          effectiveStrategy == ScrollNotificationStrategy.all ||
+          notification.depth == 0;
+      if (!shouldHandle) {
         return false;
       }
       if (notification is ScrollStartNotification) {

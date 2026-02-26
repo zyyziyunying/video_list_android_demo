@@ -66,10 +66,12 @@
   - 已做：已对齐当前实现参数与行为（纵向+横向列表结构、`maxActive` 默认值与可选范围、阈值与滚动态规则），并补充回归测试说明。
   - 验收：文档参数与代码一致。
 
-- [ ] **滚动通知只看 `depth == 0`，嵌套横向滚动策略需明确**
-  - 位置：`packages/video_visibility/lib/src/video_visibility_manager.dart:85`、`lib/pages/video_list_page.dart:111`
-  - 风险：复杂滚动场景下行为可能与预期不一致。
-  - 建议：先定策略（仅主滚动 / 任一滚动），再补对应测试。
+- [x] **滚动通知策略已明确（包可配置，示例页采用“任一滚动”）**
+  - 位置：`packages/video_visibility/lib/src/video_visibility_manager.dart`、`lib/pages/video_list_page.dart`
+  - 已做：
+    - 新增 `ScrollNotificationStrategy`（`primaryOnly` / `all`）并接入 `VideoVisibilityManager`。
+    - `VideoListPage` 显式使用 `ScrollNotificationStrategy.all`，覆盖纵向+横向嵌套滚动。
+    - 新增 `packages/video_visibility/test/video_visibility_manager_test.dart` 回归用例，覆盖“嵌套通知忽略/处理”两种策略。
   - 验收：策略明确且有回归用例保障。
 
 ### P2（中优先级，策略优化）
