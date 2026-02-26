@@ -7,10 +7,10 @@
 
 - 已完成：P0-3（测试基线恢复全绿）。
 - 已完成（第一轮）：P0-1 包级并发上限时序压力测试补齐。
+- 已完成（第二轮）：P0-1 app 层时序/压力场景验证补齐（ManagedVisibilityItem + 滚动事件 + attach/detach 抖动）。
 - 已完成（第一轮）：P0-2 Controller 生命周期释放安全性验证。
 - 已完成（文档同步）：README 已与当前实现对齐（布局/阈值/maxActive/回归测试说明）。
-- 关键约定（已确认）：在 P0-1（`activeCount <= maxActive`）完全收口并打勾前，不进入 P1。
-- 下一步：继续补齐 P0-1 的验收（含 app 层时序/压力场景），完成后再进入 P1。
+- 下一步：进入 P1（滚动通知边界策略明确 + 回归测试补齐）。
 
 ## 项目定位（先对齐）
 
@@ -26,14 +26,16 @@
 
 ### P0（严重，先修）
 
-- [ ] **并发上限必须在任意时序下都成立（防 OOM 的硬约束）**
+- [x] **并发上限在包层 + app 层时序压力场景下均已验证（防 OOM 的硬约束）**
   - 位置：`packages/video_visibility/lib/src/video_concurrency_manager.dart`
   - 风险：若 active 控制失效，可能同时初始化/播放过多视频，导致内存和解码压力飙升。
-  - 建议：补齐时序测试（快速滚动、频繁切 tab、attach/detach 抖动），持续验证 `activeCount <= maxActive`。
+  - 建议：持续保留时序测试（快速滚动、频繁切 tab、attach/detach 抖动）作为回归基线。
   - 已做（第一轮）：新增 `packages/video_visibility/test/video_concurrency_manager_test.dart` 压力测试，
     对 churn 操作（register/unregister、visibility 抖动、scrolling 切换、maxActive 动态变化）持续断言
     `activeCount <= maxActive`。
-  - 当前状态：**未收口（仍保持未勾选）**，需补 app 层验证后再关闭此项。
+  - 已做（第二轮）：新增 `test/video_visibility_app_churn_test.dart`，覆盖 app 层 wiring（ManagedVisibilityItem）下的
+    可见性抖动、滚动开始/结束、挂载/卸载抖动与 `maxActive` 动态变化，持续断言并发上限与播放数量不越界。
+  - 当前状态：**已收口（已勾选）**。
   - 验收：压力场景下并发上限始终受控。
 
 - [x] **Controller 生命周期与释放策略已补充可回归验证（第一轮）**

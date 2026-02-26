@@ -63,6 +63,7 @@ for ($i = 1; $i -le 40; $i++) {
 
 - `test/widget_test.dart`：测试基线冒烟用例。
 - `test/video_list_item_lifecycle_test.dart`：controller 生命周期回归（延迟释放、取消释放、销毁立即释放）。
+- `test/video_visibility_app_churn_test.dart`：app 层时序/压力回归（ManagedVisibilityItem + 滚动事件 + attach/detach 抖动，持续断言并发不超上限）。
 - `packages/video_visibility/test/video_concurrency_manager_test.dart`：并发管理 churn 压力回归（持续断言 `activeCount <= maxActive`）。
 - 建议每次迭代后执行：
 
