@@ -9,22 +9,93 @@ import 'package:video_visibility/video_visibility.dart';
 import '../models/video_item_data.dart';
 import 'state_pill.dart';
 
+typedef VideoItemControllerFactory =
+    VideoItemController Function(VideoItemData data);
+
+abstract class VideoItemController {
+  bool get isInitialized;
+  bool get isPlaying;
+  Size get size;
+
+  Future<void> initialize();
+  Future<void> play();
+  Future<void> pause();
+  Future<void> setLooping(bool looping);
+  Future<void> setVolume(double volume);
+  Future<void> dispose();
+
+  Widget buildView();
+}
+
+class VideoPlayerItemController implements VideoItemController {
+  VideoPlayerItemController(VideoItemData data)
+    : _controller = data.isAsset
+          ? VideoPlayerController.asset(
+              data.source,
+              videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+            )
+          : VideoPlayerController.networkUrl(
+              Uri.parse(data.source),
+              videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+            );
+
+  final VideoPlayerController _controller;
+
+  @override
+  bool get isInitialized => _controller.value.isInitialized;
+
+  @override
+  bool get isPlaying => _controller.value.isPlaying;
+
+  @override
+  Size get size => _controller.value.size;
+
+  @override
+  Future<void> initialize() => _controller.initialize();
+
+  @override
+  Future<void> play() => _controller.play();
+
+  @override
+  Future<void> pause() => _controller.pause();
+
+  @override
+  Future<void> setLooping(bool looping) => _controller.setLooping(looping);
+
+  @override
+  Future<void> setVolume(double volume) => _controller.setVolume(volume);
+
+  @override
+  Future<void> dispose() => _controller.dispose();
+
+  @override
+  Widget buildView() => VideoPlayer(_controller);
+}
+
+VideoItemController _defaultVideoItemControllerFactory(VideoItemData data) {
+  return VideoPlayerItemController(data);
+}
+
 class VideoListItem extends StatefulWidget {
   const VideoListItem({
     super.key,
     required this.data,
     required this.manager,
+    this.useManagedVisibility = true,
+    this.controllerFactory,
   });
 
   final VideoItemData data;
   final VideoVisibilityManager manager;
+  final bool useManagedVisibility;
+  final VideoItemControllerFactory? controllerFactory;
 
   @override
-  State<VideoListItem> createState() => _VideoListItemState();
+  State<VideoListItem> createState() => VideoListItemState();
 }
 
-class _VideoListItemState extends State<VideoListItem> {
-  VideoPlayerController? _controller;
+class VideoListItemState extends State<VideoListItem> {
+  VideoItemController? _controller;
   Timer? _disposeTimer;
   bool _isActive = false;
   bool _isInitializing = false;
@@ -48,9 +119,17 @@ class _VideoListItemState extends State<VideoListItem> {
     }
   }
 
+  @visibleForTesting
+  void debugSetActive(bool isActive) {
+    _onActiveChanged(isActive);
+  }
+
+  @visibleForTesting
+  bool get debugIsActive => _isActive;
+
   Future<void> _ensureController() async {
     if (_controller != null || _isInitializing) {
-      if (_controller != null && !_controller!.value.isPlaying) {
+      if (_controller != null && !_controller!.isPlaying) {
         await _controller!.play();
       }
       return;
@@ -58,15 +137,10 @@ class _VideoListItemState extends State<VideoListItem> {
     _isInitializing = true;
     _errorMessage = null;
 
-    final controller = widget.data.isAsset
-        ? VideoPlayerController.asset(
-            widget.data.source,
-            videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-          )
-        : VideoPlayerController.networkUrl(
-            Uri.parse(widget.data.source),
-            videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-          );
+    final controller =
+        (widget.controllerFactory ?? _defaultVideoItemControllerFactory)(
+          widget.data,
+        );
 
     try {
       await controller.setLooping(true);
@@ -113,53 +187,56 @@ class _VideoListItemState extends State<VideoListItem> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.useManagedVisibility) {
+      return _buildBody(_isActive);
+    }
+
     return ManagedVisibilityItem(
       id: widget.data.id,
       manager: widget.manager,
       onActiveChanged: _onActiveChanged,
-      builder: (context, isActive) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+      builder: (context, isActive) => _buildBody(isActive),
+    );
+  }
+
+  Widget _buildBody(bool isActive) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        AspectRatio(
+          aspectRatio: kVideoAspectRatio,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: _buildVideoContent(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 6,
+          runSpacing: 4,
           children: [
-            AspectRatio(
-              aspectRatio: kVideoAspectRatio,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: _buildVideoContent(),
-              ),
+            Text(
+              widget.data.title,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                Text(
-                  widget.data.title,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-                StatePill(
-                  label: isActive ? 'ACTIVE' : 'IDLE',
-                  color: isActive ? Colors.green : Colors.grey,
-                ),
-                if (_isInitializing) const Text('Loading...'),
-                if (_errorMessage != null)
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-              ],
+            StatePill(
+              label: isActive ? 'ACTIVE' : 'IDLE',
+              color: isActive ? Colors.green : Colors.grey,
             ),
+            if (_isInitializing) const Text('Loading...'),
+            if (_errorMessage != null)
+              Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
           ],
-        );
-      },
+        ),
+      ],
     );
   }
 
   Widget _buildVideoContent() {
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) {
+    if (controller == null || !controller.isInitialized) {
       return Container(
         color: Colors.black12,
         alignment: Alignment.center,
@@ -170,9 +247,9 @@ class _VideoListItemState extends State<VideoListItem> {
     return FittedBox(
       fit: BoxFit.cover,
       child: SizedBox(
-        width: controller.value.size.width,
-        height: controller.value.size.height,
-        child: VideoPlayer(controller),
+        width: controller.size.width,
+        height: controller.size.height,
+        child: controller.buildView(),
       ),
     );
   }
