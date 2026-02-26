@@ -40,21 +40,37 @@ for ($i = 1; $i -le 40; $i++) {
 - 修改 `1..40` 的范围即可生成更多/更少视频。
 - 如需更换字体或位置，调整 `fontfile` 或 `x/y` 参数。
 
-## 布局与滚动/播放逻辑
+## 布局与滚动/播放逻辑（当前实现）
 
-- 布局为每行 4 个视频（`kVideosPerRow = 4`）。
+- 页面是“纵向列表 + 横向列表”结构：外层 `ListView` 纵向滚动，每一行内层 `ListView` 横向滚动。
+- 行分组由 `lib/pages/video_list_page.dart` 生成（固定随机种子 42），每行 5-10 个视频。
+- 单个 item 宽度约为视口宽度的 `1/3`，高度按 `kVideoAspectRatio = 3/4` 计算。
 - 每个 item 使用 `VisibilityDetector` 上报可见比例（visible fraction）。
-- `VideoConcurrencyManager` 决定哪些视频处于 active：
-  - 当 `visible >= 0.6` 时开始播放。
-  - 当 `visible < 0.2` 时停止播放（滞回）。
-  - 最多同时播放 `maxActive` 个视频（默认 7，UI 可选 4-7）。
-  - 优先保留已激活的视频，其次按可见度、再按最近更新时间排序。
+- `VideoVisibilityManager` 决定哪些视频处于 active（页面默认 `maxActive: 3`，UI 可调 `3-7`）：
+  - 默认阈值：`visibleStart = 0.8`、`visibleStop = 0.2`（滞回），重算节流 `300 ms`。
+  - 滚动态仅允许可见性接近 100%（阈值 `0.999`）的 item 激活。
+  - 候选优先级：已激活优先，其次按可见度、再按最近更新时间排序。
+  - 并发约束始终为 `activeCount <= maxActive`。
 - 滚动行为：
-  - `ScrollStart` 时进入滚动模式，仅允许可见性为 100%（阈值 0.999）的 item 播放，其余暂停。
-  - `ScrollEnd` 后等待 250 ms 再按常规阈值重新计算 active。
+  - `createScrollListener()` 仅处理 `depth == 0` 的滚动通知。
+  - `ScrollStart` 进入滚动态；`ScrollEnd` 后等待 `250 ms` 退出滚动态并重算。
 - Item 生命周期：
-  - 变 active 时创建 `VideoPlayerController`，初始化、循环、静音并播放。
-  - 变 inactive 时先暂停，800 ms 后释放 controller。
+  - 变 active 时创建 controller，初始化、循环、静音并播放。
+  - 变 inactive 时先暂停，`800 ms` 后释放 controller。
+  - `VideoListItem` 通过 `VideoItemController` 抽象 controller，方便注入 fake controller 做生命周期测试。
+
+## 测试与回归建议
+
+- `test/widget_test.dart`：测试基线冒烟用例。
+- `test/video_list_item_lifecycle_test.dart`：controller 生命周期回归（延迟释放、取消释放、销毁立即释放）。
+- `packages/video_visibility/test/video_concurrency_manager_test.dart`：并发管理 churn 压力回归（持续断言 `activeCount <= maxActive`）。
+- 建议每次迭代后执行：
+
+```bash
+fvm flutter analyze
+fvm flutter test test
+fvm flutter test packages/video_visibility/test
+```
 
 ## Mock 数据
 
