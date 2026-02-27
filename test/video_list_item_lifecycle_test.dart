@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
@@ -137,16 +139,99 @@ void main() {
       },
       experimentalLeakTesting: LeakTesting.settings,
     );
+
+    testWidgets(
+      'shows error and disposes controller when initialization fails',
+      (tester) async {
+        await pumpItem(tester);
+        controllerFactory.failInitialize = true;
+
+        await setActive(tester, true);
+        final controller = controllerFactory.lastCreated;
+        await tester.pump();
+
+        expect(controller.initializeCallCount, 1);
+        expect(controller.disposeCallCount, 1);
+        expect(controller.playCallCount, 0);
+        expect(find.text('Init failed'), findsOneWidget);
+        expect(find.text('Loading...'), findsNothing);
+
+        await removeItem(tester);
+      },
+      experimentalLeakTesting: LeakTesting.settings,
+    );
+
+    testWidgets(
+      'disposes in-flight controller when widget unmounts during initialization',
+      (tester) async {
+        await pumpItem(tester);
+
+        final initializeCompleter = Completer<void>();
+        controllerFactory.nextInitializeCompleter = initializeCompleter;
+
+        await setActive(tester, true);
+        final controller = controllerFactory.lastCreated;
+        expect(controller.initializeCallCount, 1);
+        expect(controller.disposeCallCount, 0);
+
+        await removeItem(tester);
+        initializeCompleter.complete();
+        await tester.pump();
+        await tester.pump();
+
+        expect(controller.disposeCallCount, 1);
+        expect(controller.playCallCount, 0);
+        expect(controller.isDisposed, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+      experimentalLeakTesting: LeakTesting.settings,
+    );
+
+    testWidgets(
+      'disposes controller if item becomes inactive before init completes',
+      (tester) async {
+        await pumpItem(tester);
+
+        final initializeCompleter = Completer<void>();
+        controllerFactory.nextInitializeCompleter = initializeCompleter;
+
+        await setActive(tester, true);
+        final controller = controllerFactory.lastCreated;
+
+        await setActive(tester, false);
+        expect(controller.pauseCallCount, 0);
+
+        initializeCompleter.complete();
+        await tester.pump();
+        await tester.pump();
+
+        expect(controller.disposeCallCount, 1);
+        expect(controller.playCallCount, 0);
+        expect(controller.isDisposed, isTrue);
+
+        await tester.pump(disposeDelay + const Duration(milliseconds: 50));
+        expect(controller.disposeCallCount, 1);
+
+        await removeItem(tester);
+      },
+      experimentalLeakTesting: LeakTesting.settings,
+    );
   });
 }
 
 class FakeVideoItemControllerFactory {
   int createdCount = 0;
+  bool failInitialize = false;
+  Completer<void>? nextInitializeCompleter;
   final List<FakeVideoItemController> controllers = <FakeVideoItemController>[];
 
   FakeVideoItemController create(VideoItemData data) {
     createdCount++;
-    final controller = FakeVideoItemController();
+    final controller = FakeVideoItemController(
+      failInitialize: failInitialize,
+      initializeCompleter: nextInitializeCompleter,
+    );
+    nextInitializeCompleter = null;
     controllers.add(controller);
     return controller;
   }
@@ -155,10 +240,20 @@ class FakeVideoItemControllerFactory {
 }
 
 class FakeVideoItemController implements VideoItemController {
+  FakeVideoItemController({
+    bool failInitialize = false,
+    Completer<void>? initializeCompleter,
+  }) : _failInitialize = failInitialize,
+       _initializeCompleter = initializeCompleter;
+
+  final bool _failInitialize;
+  final Completer<void>? _initializeCompleter;
+
   bool _isInitialized = false;
   bool _isPlaying = false;
   bool isDisposed = false;
 
+  int initializeCallCount = 0;
   int playCallCount = 0;
   int pauseCallCount = 0;
   int disposeCallCount = 0;
@@ -174,6 +269,13 @@ class FakeVideoItemController implements VideoItemController {
 
   @override
   Future<void> initialize() async {
+    initializeCallCount++;
+    if (_initializeCompleter != null) {
+      await _initializeCompleter.future;
+    }
+    if (_failInitialize) {
+      throw StateError('Init failed');
+    }
     _isInitialized = true;
   }
 

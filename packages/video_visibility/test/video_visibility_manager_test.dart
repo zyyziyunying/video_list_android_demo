@@ -62,6 +62,63 @@ void main() {
       expect(manager.isActive('video_a'), isTrue);
     });
 
+    testWidgets('forwards maxActive getter/setter and activeCount', (
+      tester,
+    ) async {
+      final manager = VideoVisibilityManager(
+        maxActive: 2,
+        visibleStart: 0.8,
+        visibleStop: 0.2,
+        recalcThrottle: throttle,
+      );
+      addTearDown(manager.dispose);
+
+      expect(manager.maxActive, 2);
+      expect(manager.activeCount, 0);
+
+      manager.attach('video_a');
+      manager.attach('video_b');
+      manager.attach('video_c');
+      manager.onVisibilityChanged('video_a', 1.0);
+      manager.onVisibilityChanged('video_b', 0.95);
+      manager.onVisibilityChanged('video_c', 0.9);
+      await tester.pump(throttle);
+
+      expect(manager.activeCount, 2);
+
+      manager.maxActive = 1;
+      expect(manager.maxActive, 1);
+      expect(manager.activeCount, 1);
+    });
+
+    testWidgets('detach removes active items from manager state', (
+      tester,
+    ) async {
+      final manager = VideoVisibilityManager(
+        maxActive: 2,
+        visibleStart: 0.8,
+        visibleStop: 0.2,
+        recalcThrottle: throttle,
+      );
+      addTearDown(manager.dispose);
+
+      manager.attach('video_a');
+      manager.attach('video_b');
+      manager.onVisibilityChanged('video_a', 1.0);
+      manager.onVisibilityChanged('video_b', 0.9);
+      await tester.pump(throttle);
+
+      expect(manager.activeCount, 2);
+      expect(manager.isActive('video_a'), isTrue);
+
+      manager.detach('video_a');
+      expect(manager.isActive('video_a'), isFalse);
+      expect(manager.activeCount, 1);
+
+      manager.detach('video_missing');
+      expect(manager.activeCount, 1);
+    });
+
     testWidgets('primaryOnly strategy ignores nested scroll notifications', (
       tester,
     ) async {
