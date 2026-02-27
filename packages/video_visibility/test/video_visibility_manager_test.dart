@@ -119,6 +119,50 @@ void main() {
       expect(manager.activeCount, 1);
     });
 
+    testWidgets('forwards threshold updates and mutable scrollEndDelay', (
+      tester,
+    ) async {
+      final context = await pumpContext(tester);
+      final manager = VideoVisibilityManager(
+        maxActive: 1,
+        visibleStart: 0.8,
+        visibleStop: 0.2,
+        recalcThrottle: throttle,
+        scrollEndDelay: endDelay,
+      );
+      addTearDown(manager.dispose);
+
+      manager.attach('video_a');
+      manager.onVisibilityChanged('video_a', 0.5);
+      await tester.pump(throttle);
+      expect(manager.isActive('video_a'), isFalse);
+
+      manager.visibleStart = 0.4;
+      expect(manager.visibleStart, 0.4);
+      expect(manager.isActive('video_a'), isTrue);
+
+      manager.visibleStart = 0.9;
+      expect(manager.isActive('video_a'), isTrue);
+
+      manager.visibleStop = 0.6;
+      expect(manager.visibleStop, 0.6);
+      expect(manager.isActive('video_a'), isFalse);
+
+      manager.scrollEndDelay = const Duration(milliseconds: 10);
+      expect(manager.scrollEndDelay, const Duration(milliseconds: 10));
+
+      final onScroll = manager.createScrollListener();
+      onScroll(ScrollStartNotification(metrics: metrics, context: context));
+      expect(manager.isScrolling, isTrue);
+
+      onScroll(ScrollEndNotification(metrics: metrics, context: context));
+      await tester.pump(const Duration(milliseconds: 9));
+      expect(manager.isScrolling, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(manager.isScrolling, isFalse);
+    });
+
     testWidgets('primaryOnly strategy ignores nested scroll notifications', (
       tester,
     ) async {

@@ -44,19 +44,20 @@ class VideoVisibilityManager extends ChangeNotifier {
     double visibleStart = 0.8,
     double visibleStop = 0.2,
     Duration recalcThrottle = const Duration(milliseconds: 300),
-    this.scrollEndDelay = const Duration(milliseconds: 250),
+    Duration scrollEndDelay = const Duration(milliseconds: 250),
     this.scrollNotificationStrategy = ScrollNotificationStrategy.primaryOnly,
   }) : _core = VideoConcurrencyManager(
          maxActive: maxActive,
          visibleStart: visibleStart,
          visibleStop: visibleStop,
          recalcThrottle: recalcThrottle,
-       ) {
+       ),
+       _scrollEndDelay = scrollEndDelay {
     _core.addListener(_onCoreChanged);
   }
 
   final VideoConcurrencyManager _core;
-  final Duration scrollEndDelay;
+  Duration _scrollEndDelay;
   final ScrollNotificationStrategy scrollNotificationStrategy;
   Timer? _scrollEndTimer;
 
@@ -67,6 +68,29 @@ class VideoVisibilityManager extends ChangeNotifier {
   int get activeCount => _core.activeCount;
 
   bool get isScrolling => _core.isScrolling;
+
+  double get visibleStart => _core.visibleStart;
+
+  set visibleStart(double value) => _core.visibleStart = value;
+
+  double get visibleStop => _core.visibleStop;
+
+  set visibleStop(double value) => _core.visibleStop = value;
+
+  Duration get scrollEndDelay => _scrollEndDelay;
+
+  set scrollEndDelay(Duration value) {
+    if (_scrollEndDelay == value) {
+      return;
+    }
+    _scrollEndDelay = value;
+    if (_scrollEndTimer?.isActive ?? false) {
+      _scrollEndTimer?.cancel();
+      _scrollEndTimer = Timer(_scrollEndDelay, () {
+        _core.setScrolling(false);
+      });
+    }
+  }
 
   /// 注册一个视频 item
   void attach(String id) => _core.register(id);
@@ -108,7 +132,7 @@ class VideoVisibilityManager extends ChangeNotifier {
         _core.setScrolling(true);
       } else if (notification is ScrollEndNotification) {
         _scrollEndTimer?.cancel();
-        _scrollEndTimer = Timer(scrollEndDelay, () {
+        _scrollEndTimer = Timer(_scrollEndDelay, () {
           _core.setScrolling(false);
         });
       }

@@ -47,7 +47,8 @@ NotificationListener<ScrollNotification>(
 
 ## API
 - `VideoVisibilityManager`: Core manager.
-  - `maxActive`, `activeCount`, `createScrollListener()`,
+  - `maxActive`, `visibleStart`, `visibleStop`, `scrollEndDelay`,
+    `activeCount`, `createScrollListener()`,
     `onVisibilityChanged()`, `isActive()`
 - `ManagedVisibilityItem`: Widget that wires a list item to the manager.
 

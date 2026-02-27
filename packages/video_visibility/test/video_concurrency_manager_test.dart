@@ -33,6 +33,33 @@ void main() {
       expect(manager.isActive('video_a'), isFalse);
     });
 
+    testWidgets('supports runtime threshold updates', (tester) async {
+      const throttle = Duration(milliseconds: 1);
+      final manager = VideoConcurrencyManager(
+        maxActive: 1,
+        visibleStart: 0.8,
+        visibleStop: 0.2,
+        recalcThrottle: throttle,
+      );
+      addTearDown(manager.dispose);
+
+      manager.register('video_a');
+      manager.updateVisibility('video_a', 0.5);
+      await tester.pump(throttle);
+      expect(manager.isActive('video_a'), isFalse);
+
+      manager.visibleStart = 0.4;
+      expect(manager.visibleStart, 0.4);
+      expect(manager.isActive('video_a'), isTrue);
+
+      manager.visibleStart = 0.9;
+      expect(manager.isActive('video_a'), isTrue);
+
+      manager.visibleStop = 0.6;
+      expect(manager.visibleStop, 0.6);
+      expect(manager.isActive('video_a'), isFalse);
+    });
+
     testWidgets('replaces active slot when current active drops out', (
       tester,
     ) async {
@@ -139,7 +166,9 @@ void main() {
         switch (random.nextInt(5)) {
           case 0:
             if (registered.isNotEmpty) {
-              final id = registered.elementAt(random.nextInt(registered.length));
+              final id = registered.elementAt(
+                random.nextInt(registered.length),
+              );
               manager.updateVisibility(id, random.nextDouble());
             }
             break;
@@ -167,7 +196,9 @@ void main() {
           case 4:
             if (registered.isNotEmpty) {
               for (var i = 0; i < 3; i++) {
-                final id = registered.elementAt(random.nextInt(registered.length));
+                final id = registered.elementAt(
+                  random.nextInt(registered.length),
+                );
                 manager.updateVisibility(id, random.nextDouble());
               }
             }

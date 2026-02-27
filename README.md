@@ -46,7 +46,8 @@ for ($i = 1; $i -le 40; $i++) {
 - 行分组由 `lib/pages/video_list_page.dart` 生成（固定随机种子 42），每行 5-10 个视频。
 - 单个 item 宽度约为视口宽度的 `1/3`，高度按 `kVideoAspectRatio = 3/4` 计算。
 - 每个 item 使用 `VisibilityDetector` 上报可见比例（visible fraction）。
-- `VideoVisibilityManager` 决定哪些视频处于 active（页面默认 `maxActive: 3`，UI 可调 `3-7`）：
+- `VideoVisibilityManager` 决定哪些视频处于 active（页面默认 `maxActive: 3`）：
+  - UI 支持运行时调参：`maxActive (3-7)`、`visibleStart (0-1)`、`visibleStop (0-1)`、`scrollEndDelay (0/100/250/400/600ms)`。
   - 默认阈值：`visibleStart = 0.8`、`visibleStop = 0.2`（滞回），重算节流 `300 ms`。
   - 滚动态仅允许可见性接近 100%（阈值 `0.999`）的 item 激活。
   - 候选优先级：已激活优先，其次按可见度、再按最近更新时间排序。
@@ -56,7 +57,7 @@ for ($i = 1; $i -le 40; $i++) {
     - `ScrollNotificationStrategy.primaryOnly`：仅处理 `depth == 0`。
     - `ScrollNotificationStrategy.all`：处理任意深度（含嵌套横向列表）。
   - 当前示例页（`VideoListPage`）使用 `ScrollNotificationStrategy.all`。
-  - `ScrollStart` 进入滚动态；`ScrollEnd` 后等待 `250 ms` 退出滚动态并重算。
+  - `ScrollStart` 进入滚动态；`ScrollEnd` 后按 `scrollEndDelay` 退出滚动态并重算（示例页默认 `250 ms`，UI 可调）。
 - Item 生命周期：
   - 变 active 时创建 controller，初始化、循环、静音并播放。
   - 变 inactive 时先暂停，`800 ms` 后释放 controller。

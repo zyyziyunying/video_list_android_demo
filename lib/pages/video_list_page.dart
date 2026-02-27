@@ -16,15 +16,27 @@ class VideoListPage extends StatefulWidget {
 }
 
 class _VideoListPageState extends State<VideoListPage> {
+  static const List<int> _scrollEndDelayOptions = <int>[0, 100, 250, 400, 600];
+
+  static const double _initialVisibleStart = 0.8;
+  static const double _initialVisibleStop = 0.2;
+  static const int _initialScrollEndDelayMs = 250;
+
   late final VideoVisibilityManager _manager;
   final List<VideoItemData> _items = buildSampleVideos();
   late final List<List<VideoItemData>> _rows;
+  double _visibleStart = _initialVisibleStart;
+  double _visibleStop = _initialVisibleStop;
+  int _scrollEndDelayMs = _initialScrollEndDelayMs;
 
   @override
   void initState() {
     super.initState();
     _manager = VideoVisibilityManager(
       maxActive: 3,
+      visibleStart: _visibleStart,
+      visibleStop: _visibleStop,
+      scrollEndDelay: Duration(milliseconds: _scrollEndDelayMs),
       scrollNotificationStrategy: ScrollNotificationStrategy.all,
     );
     _rows = _buildRows();
@@ -60,32 +72,88 @@ class _VideoListPageState extends State<VideoListPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
+            child: Column(
               children: [
-                const Text('Max Active'),
-                const SizedBox(width: 8),
-                DropdownButton<int>(
-                  value: _manager.maxActive,
-                  items: const [
-                    DropdownMenuItem(value: 3, child: Text('3')),
-                    DropdownMenuItem(value: 4, child: Text('4')),
-                    DropdownMenuItem(value: 5, child: Text('5')),
-                    DropdownMenuItem(value: 6, child: Text('6')),
-                    DropdownMenuItem(value: 7, child: Text('7')),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    const Text('Max Active'),
+                    DropdownButton<int>(
+                      value: _manager.maxActive,
+                      items: const [
+                        DropdownMenuItem(value: 3, child: Text('3')),
+                        DropdownMenuItem(value: 4, child: Text('4')),
+                        DropdownMenuItem(value: 5, child: Text('5')),
+                        DropdownMenuItem(value: 6, child: Text('6')),
+                        DropdownMenuItem(value: 7, child: Text('7')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _manager.maxActive = value;
+                          });
+                        }
+                      },
+                    ),
+                    const Text('Scroll End'),
+                    DropdownButton<int>(
+                      value: _scrollEndDelayMs,
+                      items: _scrollEndDelayOptions
+                          .map(
+                            (value) => DropdownMenuItem<int>(
+                              value: value,
+                              child: Text('${value}ms'),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        setState(() {
+                          _scrollEndDelayMs = value;
+                          _manager.scrollEndDelay = Duration(
+                            milliseconds: value,
+                          );
+                        });
+                      },
+                    ),
+                    AnimatedBuilder(
+                      animation: _manager,
+                      builder: (context, _) {
+                        return Text('Active: ${_manager.activeCount}');
+                      },
+                    ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                _buildThresholdSlider(
+                  label: 'Visible Start',
+                  value: _visibleStart,
                   onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _manager.maxActive = value;
-                      });
-                    }
+                    setState(() {
+                      _visibleStart = value;
+                      _manager.visibleStart = value;
+                      if (_visibleStop > value) {
+                        _visibleStop = value;
+                        _manager.visibleStop = value;
+                      }
+                    });
                   },
                 ),
-                const Spacer(),
-                AnimatedBuilder(
-                  animation: _manager,
-                  builder: (context, _) {
-                    return Text('Active: ${_manager.activeCount}');
+                _buildThresholdSlider(
+                  label: 'Visible Stop',
+                  value: _visibleStop,
+                  onChanged: (value) {
+                    final adjustedValue = value > _visibleStart
+                        ? _visibleStart
+                        : value;
+                    setState(() {
+                      _visibleStop = adjustedValue;
+                      _manager.visibleStop = adjustedValue;
+                    });
                   },
                 ),
               ],
@@ -144,6 +212,32 @@ class _VideoListPageState extends State<VideoListPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildThresholdSlider({
+    required String label,
+    required double value,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Row(
+      children: [
+        SizedBox(width: 92, child: Text(label)),
+        Expanded(
+          child: Slider(
+            value: value,
+            min: 0,
+            max: 1,
+            divisions: 20,
+            label: value.toStringAsFixed(2),
+            onChanged: onChanged,
+          ),
+        ),
+        SizedBox(
+          width: 40,
+          child: Text(value.toStringAsFixed(2), textAlign: TextAlign.right),
+        ),
+      ],
     );
   }
 }

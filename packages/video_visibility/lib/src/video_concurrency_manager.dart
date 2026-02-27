@@ -6,15 +6,17 @@ import 'package:flutter/scheduler.dart';
 class VideoConcurrencyManager extends ChangeNotifier {
   VideoConcurrencyManager({
     int maxActive = 3,
-    this.visibleStart = 1.0,
-    this.visibleStop = 0.8,
+    double visibleStart = 1.0,
+    double visibleStop = 0.8,
     this.recalcThrottle = const Duration(milliseconds: 300),
-  }) : _maxActive = maxActive;
+  }) : _maxActive = maxActive,
+       _visibleStart = visibleStart,
+       _visibleStop = visibleStop;
 
   static const double _fullVisibilityThreshold = 0.999;
 
-  final double visibleStart;
-  final double visibleStop;
+  double _visibleStart;
+  double _visibleStop;
   final Duration recalcThrottle;
 
   final Map<String, _Entry> _entries = {};
@@ -28,12 +30,30 @@ class VideoConcurrencyManager extends ChangeNotifier {
   int get maxActive => _maxActive;
   int get activeCount => _active.length;
   bool get isScrolling => _isScrolling;
+  double get visibleStart => _visibleStart;
+  double get visibleStop => _visibleStop;
 
   set maxActive(int value) {
     if (_maxActive == value) {
       return;
     }
     _maxActive = value;
+    _scheduleRecalculate(immediate: true);
+  }
+
+  set visibleStart(double value) {
+    if (_visibleStart == value) {
+      return;
+    }
+    _visibleStart = value;
+    _scheduleRecalculate(immediate: true);
+  }
+
+  set visibleStop(double value) {
+    if (_visibleStop == value) {
+      return;
+    }
+    _visibleStop = value;
     _scheduleRecalculate(immediate: true);
   }
 
