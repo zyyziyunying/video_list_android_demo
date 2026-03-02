@@ -77,6 +77,54 @@ fvm flutter test test
 fvm flutter test packages/video_visibility/test
 ```
 
+## 内存采样脚本（adb meminfo）
+
+- 新增 `monitor_meminfo.ps1`（PowerShell）与 `monitor_meminfo.py`（Python）用于定时采样 `adb shell dumpsys meminfo`。
+- 采样结果会写入 `meminfo_reports/<package>_<timestamp>/`，包含：
+  - `metrics.csv`：每次采样的结构化指标（TOTAL PSS/RSS、Graphics、Java/Native Heap 等）。
+  - `raw_meminfo.log`：每次完整原始 `dumpsys meminfo` 文本。
+  - `summary.txt`：最小/平均/最大值、首尾增量、以及自动趋势判断（`suspected_leak` / `no_clear_leak` / `insufficient_data`）。
+- 使用前请先让目标 App 处于运行状态，否则脚本会直接报错退出。
+- 示例（5 秒一次，采样 120 次，约 10 分钟）：
+
+```powershell
+./monitor_meminfo.ps1 `
+  -PackageName com.example.video_list_android_demo `
+  -IntervalSec 5 `
+  -Samples 120
+```
+
+- 也可按时长采样（例如 30 分钟；`Samples=0` 表示只按时长停止）：
+
+```powershell
+./monitor_meminfo.ps1 `
+  -PackageName com.example.video_list_android_demo `
+  -IntervalSec 5 `
+  -DurationSec 1800 `
+  -Samples 0
+```
+
+- 可按项目情况调节自动判定阈值（示例）：
+
+```powershell
+./monitor_meminfo.ps1 `
+  -PackageName com.example.video_list_android_demo `
+  -IntervalSec 5 `
+  -DurationSec 1800 `
+  -Samples 0 `
+  -PssSlopeThresholdMbPerMin 1.2 `
+  -RssSlopeThresholdMbPerMin 1.8 `
+  -MinDeltaMbForLeak 20 `
+  -MinSamplesForLeakCheck 20 `
+  -MinDurationMinForLeakCheck 8
+```
+
+### 实测快照（2026-03-02）
+
+- 7 路播放 + 高频滑动后静置：`TOTAL PSS ≈ 344 MB`，`TOTAL RSS ≈ 449 MB`，`Graphics ≈ 101 MB`，`Local Binders = 72`。
+- 降到 3 路播放并静置后：`TOTAL PSS ≈ 308 MB`，`TOTAL RSS ≈ 413 MB`，`Graphics ≈ 84 MB`，`Local Binders = 64`。
+- 结论：高负载阶段会上冲，降负载静置后可明显回落；当前轮次未出现“只升不降”的持续泄漏特征。
+
 ## Mock 数据
 
 - `lib/data/sb_data.mock.dart` 包含模拟的楼层（floor）数据，每个楼层含多个模板（template），字段包括封面图、标题、描述、权重比例等。
