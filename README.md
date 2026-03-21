@@ -2,6 +2,8 @@
 
 用于测试滚动列表中并发播放视频的 Flutter 示例项目。
 
+工程计划、历史评审与归档文档索引见 [`docs/README.md`](docs/README.md)。
+
 ## 视频资源
 
 - `assets/videos/` 下有 40 个本地 MP4 文件（例如 `assets/videos/video_01.mp4` ... `video_40.mp4`）。

@@ -1,0 +1,12 @@
+java.lang.OutOfMemoryError
+Exception java.lang.OutOfMemoryError:
+  at androidx.media3.exoplayer.ExoPlayerImplInternal.shouldContinueLoading (ExoPlayerImplInternal.java:3086)
+  at androidx.media3.exoplayer.ExoPlayerImplInternal.maybeContinueLoading (ExoPlayerImplInternal.java:3057)
+  at androidx.media3.exoplayer.ExoPlayerImplInternal.maybeUpdateLoadingPeriod (ExoPlayerImplInternal.java:2600)
+  at androidx.media3.exoplayer.ExoPlayerImplInternal.updatePeriods (ExoPlayerImplInternal.java:2566)
+  at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork (ExoPlayerImplInternal.java:1333)
+  at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage (ExoPlayerImplInternal.java:697)
+  at android.os.Handler.dispatchMessage (Handler.java:113)
+  at android.os.Looper.loopOnce (Looper.java:210)
+  at android.os.Looper.loop (Looper.java:302)
+  at android.os.HandlerThread.run (HandlerThread.java:67)

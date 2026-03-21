@@ -8,6 +8,11 @@
 - `assets/videos/` stores local MP4 fixtures used by demo playback; Android host config is under `android/`.
 - `download_covers.py` is a local helper script for cover-image downloads from mock data; output goes to ignored `cover_images/`.
 
+## Documentation Placement
+- Follow [`docs/README.md`](docs/README.md) as the human-facing source of truth for repository doc placement.
+- Keep root-level Markdown focused on entry docs such as `README.md`; place active implementation-facing plans or review notes under `docs/problem/`.
+- Move closed status, review, or closeout docs to `docs/problem/archive/` and leave a short redirect stub only when the old path may still be referenced.
+
 ## Build, Test, and Development Commands
 - `fvm flutter pub get` - install dependencies with the pinned SDK (`.fvmrc`, Flutter 3.41.2).
 - `fvm flutter run` - run the demo on a connected device or emulator.
